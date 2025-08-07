@@ -4,6 +4,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iomanip>
+#include <cstring> // Needed for strcspn
 
 using namespace std;
 
@@ -39,6 +40,9 @@ public:
         ofstream logFile("sensor_log.txt", ios::app);
         time_t now = time(0);
         char* dt = ctime(&now);
+
+        // Remove trailing newline from ctime string
+        dt[strcspn(dt, "\n")] = 0;
 
         logFile << fixed << setprecision(2);
         logFile << "[" << dt << "] " << sensorName << " Reading: " << value << " °C";
