@@ -1,82 +1,96 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string>
 #include <ctime>
 #include <cstdlib>
-#include <iomanip>
-#include <cstring> // Needed for strcspn
+#include <numeric>
+#include <iomanip> 
 
 using namespace std;
 
+// Sensor class to represent a hardware sensor
 class Sensor {
-private:
-    string sensorName;
-    float threshold;
-    vector<float> lastReadings;
-    const int maxReadings = 10;
-
 public:
-    Sensor(string name, float thresh) {
-        sensorName = name;
-        threshold = thresh;
-        srand(time(0)); // Seed random generator
+    string sensorName;
+    double threshold;
+    vector<double> readings;
+
+    Sensor(string name, double thresh) : sensorName(name), threshold(thresh) {}
+
+    // Function to calculate the average of the stored readings
+    double calculateRollingAverage() {
+        if (readings.empty()) return 0.0;
+        double sum = accumulate(readings.begin(), readings.end(), 0.0);
+        return sum / readings.size();
     }
 
-    float readTemperature() {
-        // Generate random float between 20.0 and 100.0
-        float temp = 20.0 + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (80.0)));
-        storeReading(temp);
-        return temp;
-    }
-
-    void storeReading(float value) {
-        if (lastReadings.size() == maxReadings) {
-            lastReadings.erase(lastReadings.begin()); // Remove oldest
+    // Log the reading to a file and internal storage
+    void logReading(double value, ofstream& logFile) {
+        readings.push_back(value);
+        if (readings.size() > 10) {
+            readings.erase(readings.begin());
         }
-        lastReadings.push_back(value);
-    }
 
-    void logReading(float value) {
-        ofstream logFile("sensor_log.txt", ios::app);
         time_t now = time(0);
         char* dt = ctime(&now);
+        string timestamp(dt);
+        timestamp.pop_back(); // Remove the newline character
+        
+        // Print to Terminal
+        cout << "[" << timestamp << "] " << sensorName << " Reading: " 
+             << fixed << setprecision(2) << value << " °C";
+        if (value > threshold) {
+            cout << "  <-- ALERT: Above Threshold!";
+        }
+        cout << endl;
 
-        // Remove trailing newline from ctime string
-        dt[strcspn(dt, "\n")] = 0;
-
-        logFile << fixed << setprecision(2);
-        logFile << "[" << dt << "] " << sensorName << " Reading: " << value << " °C";
-
+        // Write to File
+        logFile << "[" << timestamp << "] " << sensorName << " Reading: " 
+                << fixed << setprecision(2) << value << " °C";
         if (value > threshold) {
             logFile << "  <-- ALERT: Above Threshold!";
         }
         logFile << endl;
-
-        logFile.close();
-    }
-
-    void printLastReadings() {
-        cout << "\nLast " << lastReadings.size() << " readings for " << sensorName << ":\n";
-        for (float val : lastReadings) {
-            cout << fixed << setprecision(2) << val << " °C\n";
-        }
     }
 };
 
 int main() {
+    // Seed for random values
+    srand(static_cast<unsigned int>(time(0)));
+
+    // Creating a sensor object with a name and threshold
     Sensor tempSensor("TempSensor1", 75.0);
 
-    cout << "Starting Sensor Simulation...\n";
+    // Open log file in append mode
+    ofstream logFile("sensor_log.txt", ios::app);
 
-    for (int i = 0; i < 15; ++i) {
-        float reading = tempSensor.readTemperature();
-        cout << "Reading " << i + 1 << ": " << fixed << setprecision(2) << reading << " °C\n";
-        tempSensor.logReading(reading);
+    if (logFile.is_open()) {
+        cout << "Simulating sensor readings..." << endl;
+        
+        for (int i = 0; i < 15; ++i) {
+            // Generates a random double between 20.00 and 100.00
+            double simulatedTemp = 20.0 + (static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / 80.0)));
+            tempSensor.logReading(simulatedTemp, logFile);
+        }
+
+        // Generate the System Health Report based on rolling average
+        double avg = tempSensor.calculateRollingAverage();
+        
+        string reportHeader = "\n--- SYSTEM HEALTH REPORT ---\n";
+        string reportFooter = "---------------------------\n";
+
+        cout << reportHeader << "Final Rolling Average: " << fixed << setprecision(2) << avg << " °C" << endl;
+        cout << "Status: " << (avg > tempSensor.threshold ? "CRITICAL" : "OPERATIONAL") << endl << reportFooter;
+
+        logFile << reportHeader << "Final Rolling Average: " << fixed << setprecision(2) << avg << " °C" << endl;
+        logFile << "Status: " << (avg > tempSensor.threshold ? "CRITICAL" : "OPERATIONAL") << endl << reportFooter;
+
+        logFile.close();
+        cout << "Simulation complete. Check sensor_log.txt for permanent records." << endl;
+    } else {
+        cerr << "Unable to open file" << endl;
     }
-
-    tempSensor.printLastReadings();
-
-    cout << "\nAll readings logged to 'sensor_log.txt'.\n";
 
     return 0;
 }
