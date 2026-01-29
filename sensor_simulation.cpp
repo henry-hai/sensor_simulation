@@ -62,7 +62,7 @@ int main() {
     // Creating a sensor object with a name and threshold
     Sensor tempSensor("TempSensor1", 75.0);
 
-    // Open log file in append mode
+    // Open log file in append mode (does not overwrite existing logs)
     ofstream logFile("sensor_log.txt", ios::app);
 
     if (logFile.is_open()) {
