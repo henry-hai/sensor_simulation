@@ -1,0 +1,18 @@
+# Runtime log (regenerated when you run the program)
+sensor_log.txt
+
+# Compiled binaries
+sensor_simulation
+sensor_simulation.exe
+
+# Object / intermediate files
+*.o
+*.obj
+*.out
+
+# macOS debug symbols (from building on Mac with debug info)
+*.dSYM/
+*.dSYM
+
+# OneDrive / sync placeholder or conflict sidecars (safe to delete locally if unused)
+*.pkgf
